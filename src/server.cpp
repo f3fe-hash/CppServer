@@ -3,12 +3,16 @@
 Log_t* _info_log  = NULL;
 Log_t* _error_log = NULL;
 
+Allocator* _alloc = NULL;
+
 Server::Server(short port, std::string ip)
 {
     this->port = port;
     this->ip = ip;
     this->running = true;
     this->num_clients = 0;
+
+    _alloc = new Allocator(ALLOC_SIZE);
 
     open_log(&_info_log, "info.log");
     open_log(&_error_log, "error.log");
@@ -79,6 +83,8 @@ Server::Server(short port, std::string ip)
     }
     
     OK("Server UP");
+    INFO("Server\t[IP: %s | Port: %d] ( http://%s:%d )", ip.c_str(), port, ip.c_str(), port);
+    printf("%s----------------------------------------------------------------------------%s\n", COLOR_BLUE, COLOR_RESET);
 }
 
 Server::~Server()
@@ -89,19 +95,24 @@ Server::~Server()
     close(this->sockfd);
     if (this->listener->joinable())
         this->listener->join();
+    _alloc->deallocate((void *)this->listener);
 
     // Wait for all other threads to finish
     for (std::thread* thread : this->threads)
     {
         if (thread->joinable())
             thread->join();
+        _alloc->deallocate((void *)thread);
     }
 
-    if (_info_log) {
+    if (_info_log)
+    {
         if (_info_log->name) free(_info_log->name);
         free(_info_log);
     }
-    if (_error_log) {
+
+    if (_error_log)
+    {
         if (_error_log->name) free(_error_log->name);
         free(_error_log);
     }
@@ -112,7 +123,8 @@ Server::~Server()
 // Client Listen (To not be confused with sys/socket.h's listen function)
 void Server::clisten()
 {
-    this->listener = new std::thread(_listen, this);
+    this->listener = new (_alloc->allocate(sizeof(std::thread))) std::thread();
+    *this->listener = std::thread(_listen, (Server *)this);
 }
 
 void Server::stop()
@@ -132,10 +144,13 @@ void Server::_listen(Server* _this)
     // Listen to get connections, then create a thread to handle the connection
     while (_this->running == true)
     {
-        Client* cli = (Client *)malloc(sizeof(Client));
-        if (!cli) {
+        Client* cli = new (_alloc->allocate(sizeof(Client))) Client();
+        if (!cli)
+        {
+            _this->running = false;
             server_log(_error_log, "Failed to allocate memory for Client structure");
             FATAL("Failed to allocate memory for Client structure");
+            _this->running = true;
             continue;
         }
         int len = sizeof(cli->addr);
@@ -144,9 +159,11 @@ void Server::_listen(Server* _this)
         cli->connfd = accept(_this->sockfd, (struct sockaddr *)&cli->addr, (socklen_t *)&len);
         if (cli->connfd < 0)
         {
+            _this->running = false;
             server_log(_error_log, "Failed to accept client");
             FATAL("Failed to accept client");
-            free(cli);
+            _alloc->deallocate(cli);
+            _this->running = true;
             continue;
         }
         else
@@ -155,36 +172,49 @@ void Server::_listen(Server* _this)
         }
 
         cli->clinum = _this->num_clients;
-        std::thread* thread = new std::thread(handle_client, cli);
+
+        ClientArgs* args = new (_alloc->allocate(sizeof(ClientArgs))) ClientArgs();
+        args->cli = cli;
+        args->server = _this;
+
+        std::thread* thread = new (_alloc->allocate(sizeof(std::thread))) std::thread();
+        *thread = std::thread(handle_client, (ClientArgs *)args);
         _this->threads.push_back(thread);
+
         _this->num_clients++;
     }
 }
 
-void Server::handle_client(Client* cli)
+void Server::handle_client(ClientArgs* args)
 {
     // Alert the server that there is a new client
-    INFO("New client %d", cli->clinum);
+    INFO("New client (#%d)", args->cli->clinum + 1);
 
     // Create and send the response
     Response* res = generate_http_response(MESSAGE);
-    if (!res || !res->data) {
+    if (!res || !res->data)
+    {
+        args->server->running = false;
         server_log(_error_log, "Failed to generate HTTP response");
         FATAL("Failed to generate HTTP response");
-        if (cli) free(cli);
+        if (args->cli) _alloc->deallocate((void *)args->cli);
+        args->server->running = true;
         return;
     }
-    ssize_t sent = send(cli->connfd, res->data, res->size, 0);
-    if (sent < 0) {
+    ssize_t sent = send(args->cli->connfd, res->data, res->size, 0);
+    if (sent < 0)
+    {
         server_log(_error_log, "send failed");
         FATAL("send failed");
     }
-    close(cli->connfd);
+    close(args->cli->connfd);
 
     // Deallocate the response
-    delete[] res->data;
-    delete res;
-    free(cli);
+    _alloc->deallocate((void *)res->data);
+    _alloc->deallocate((void *)res);
+    _alloc->deallocate((void *)args->cli);
+
+    return;
 }
 
 Response* Server::generate_http_response(const char* msg)
@@ -194,10 +224,11 @@ Response* Server::generate_http_response(const char* msg)
     int size = 96 + content_length; // Header size (85) + Max decimal places for length of content (10) + message size + Null terminalor (1)
 
     // Create the response, and set up the values
-    Response* res = new Response();
-    res->data = new char[size];
-    if (!res->data) {
-        delete res;
+    Response* res = new (_alloc->allocate(sizeof(Response))) Response();
+    res->data     = new (_alloc->allocate(size)) char[size];
+    if (!res->data)
+    {
+        _alloc->deallocate(res);
         return nullptr;
     }
     res->size = snprintf(res->data, size,

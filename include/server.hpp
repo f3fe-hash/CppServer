@@ -16,8 +16,13 @@
 #include <cmath>
 
 #include "log.h"
+#include "memory.hpp"
 
 #define MESSAGE "Hello World!"
+
+#define ALLOC_SIZE 2 * MiB
+
+class Server;
 
 typedef struct
 {
@@ -32,8 +37,16 @@ typedef struct
     ssize_t size;
 } Response;
 
+typedef struct
+{
+    Server* server;
+    Client* cli;
+} ClientArgs;
+
 extern Log_t* _info_log;
 extern Log_t* _error_log;
+
+extern Allocator* _alloc;
 
 class Server
 {
@@ -51,7 +64,7 @@ class Server
     std::vector<std::thread *> threads;
     std::thread* listener;
 
-    static void handle_client(Client* client);
+    static void handle_client(ClientArgs* client);
     static void _listen(Server* _this);
 
     static Response* generate_http_response(const char* msg);
