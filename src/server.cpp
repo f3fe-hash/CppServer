@@ -5,14 +5,15 @@ Log_t* _error_log = NULL;
 
 Allocator* _alloc = NULL;
 
-Server::Server(short port, std::string ip)
+Server::Server(short port, std::string ip, int max_threads, int backlog)
 {
     this->port = port;
     this->ip = ip;
-    this->running = true;
     this->num_clients = 0;
+    this->running = true;
 
     _alloc = new Allocator(ALLOC_SIZE);
+    this->tpool = new ThreadPool(max_threads);
 
     open_log(&_info_log, "info.log");
     open_log(&_error_log, "error.log");
@@ -70,7 +71,7 @@ Server::Server(short port, std::string ip)
     }
   
     // Now server is ready to listen and verification
-    if (listen(this->sockfd, 5) != 0)
+    if (listen(this->sockfd, backlog) != 0)
     {
         server_log(_error_log, "Listen failed");
         FATAL("Listen failed");
@@ -95,36 +96,33 @@ Server::~Server()
     close(this->sockfd);
     if (this->listener->joinable())
         this->listener->join();
+    
+    // Dwallocate threads (client threadsa are already deallocated by the deallocator)
     _alloc->deallocate((void *)this->listener);
-
-    // Wait for all other threads to finish
-    for (std::thread* thread : this->threads)
-    {
-        if (thread->joinable())
-            thread->join();
-        _alloc->deallocate((void *)thread);
-    }
-
+    
+    // Deallocate logs
     if (_info_log)
     {
         if (_info_log->name) free(_info_log->name);
         free(_info_log);
     }
-
     if (_error_log)
     {
         if (_error_log->name) free(_error_log->name);
         free(_error_log);
     }
     
-    OK("Destoryed the server");
+    OK("Stopped the server");
 }
 
 // Client Listen (To not be confused with sys/socket.h's listen function)
 void Server::clisten()
 {
-    this->listener = new (_alloc->allocate(sizeof(std::thread))) std::thread();
-    *this->listener = std::thread(_listen, (Server *)this);
+    // Start a thread to listen to clients (doesn't count itself as a thread, so the deallocator thread doesn't deallocate it)
+    new_thread(reinterpret_cast<void(*)(void *)>(_listen), this);
+
+    // Start a thread to manage client put in the queue
+    new_thread(reinterpret_cast<void(*)(void *)>(_climanager), this);
 }
 
 void Server::stop()
@@ -171,17 +169,42 @@ void Server::_listen(Server* _this)
             server_log(_info_log, "Accepted new client");
         }
 
-        cli->clinum = _this->num_clients;
+        cli->clinum = _this->num_total_clients;
 
-        ClientArgs* args = new (_alloc->allocate(sizeof(ClientArgs))) ClientArgs();
-        args->cli = cli;
-        args->server = _this;
+        std::unique_lock<std::mutex> lock(_this->clients_mutex);
+        _this->clients.push(cli);
 
-        std::thread* thread = new (_alloc->allocate(sizeof(std::thread))) std::thread();
-        *thread = std::thread(handle_client, (ClientArgs *)args);
-        _this->threads.push_back(thread);
-
+        _this->num_total_clients++;
         _this->num_clients++;
+    }
+}
+
+void Server::_climanager(Server* _this)
+{
+    while (_this->running)
+    {
+        // Lock the queue access if needed
+        {
+            std::unique_lock<std::mutex> lock(_this->clients_mutex); // Add this mutex to protect queue
+
+            if (!_this->clients.empty())
+            {
+                Client* cli = _this->clients.front();
+                _this->clients.pop();
+                lock.unlock();  // Release lock early
+
+                // Allocate task with args using your allocator
+                ClientArgs* args = new (_alloc->allocate(sizeof(ClientArgs))) ClientArgs();
+                args->cli = cli;
+                args->server = _this;
+
+                // Create Task for thread pool
+                Task* task = new_task(reinterpret_cast<void(*)(void *)>(Server::handle_client_wrapper), (void *)args);
+
+                _this->tpool->enqueue(*task);
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
@@ -209,10 +232,13 @@ void Server::handle_client(ClientArgs* args)
     }
     close(args->cli->connfd);
 
+    args->server->num_clients--;
+
     // Deallocate the response
     _alloc->deallocate((void *)res->data);
     _alloc->deallocate((void *)res);
     _alloc->deallocate((void *)args->cli);
+    _alloc->deallocate((void *)args);
 
     return;
 }
@@ -225,12 +251,14 @@ Response* Server::generate_http_response(const char* msg)
 
     // Create the response, and set up the values
     Response* res = new (_alloc->allocate(sizeof(Response))) Response();
-    res->data     = new (_alloc->allocate(size)) char[size];
+    res->data = (char *)_alloc->allocate(size);
+
     if (!res->data)
     {
-        _alloc->deallocate(res);
+        //_alloc->deallocate(res);     Nope! don't deallocate a NULL pointer
         return nullptr;
     }
+
     res->size = snprintf(res->data, size,
         "HTTP/1.1 200 OK\r\n"
         "Content-Type: text/html\r\n"
@@ -242,4 +270,10 @@ Response* Server::generate_http_response(const char* msg)
     
     // Return the response
     return res;
+}
+
+void Server::handle_client_wrapper(void* arg)
+{
+    ClientArgs* args = (ClientArgs*)arg;
+    Server::handle_client(args);
 }

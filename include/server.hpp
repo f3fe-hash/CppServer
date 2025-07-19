@@ -9,18 +9,26 @@
 #include <unistd.h>
 
 #include <string>
-#include <vector>
-#include <thread>
 #include <iostream>
+
+#include <vector>
+#include <queue>
+
+#include <thread>
+#include <mutex>
 
 #include <cmath>
 
 #include "log.h"
 #include "memory.hpp"
+#include "threads.hpp"
 
 #define MESSAGE "Hello World!"
 
-#define ALLOC_SIZE 2 * MiB
+#define ALLOC_SIZE 32 * MiB
+
+#define DEFAULT_MAX_THREADS 500 // 500 threads maximum as default
+#define DEFAULT_BACKLOG 128
 
 class Server;
 
@@ -56,20 +64,43 @@ class Server
     int sockfd;
     int running;
 
-    int num_clients;
+    int num_clients;        // Number of clients currently using the server
+    int num_total_clients;  // Total clients the server handled since it was declared UP
 
     struct sockaddr_in servaddr;
 
-    std::vector<Client *> clients;
-    std::vector<std::thread *> threads;
-    std::thread* listener;
+    std::queue<Client *> clients; // Client queue
+    std::queue<std::thread *> threads; // Queue of threads. Checked by deallocator to remove done threads
 
+    std::mutex clients_mutex;
+    std::mutex threads_mutex;
+
+    // Specific-job threads
+    std::thread* listener;      // Listens to and accepts clients
+    std::thread* clientmanager; // Manages clients to make sure that there aren't too many threads running at once
+
+    ThreadPool* tpool;
+
+    // Multi-threading functions
     static void handle_client(ClientArgs* client);
     static void _listen(Server* _this);
+    static void _climanager(Server* _this);
 
     static Response* generate_http_response(const char* msg);
+
+    static void handle_client_wrapper(void* arg);
+
+    inline void new_thread(void (*func)(void*), void* args)
+    {
+        Task* task = new (_alloc->allocate(sizeof(Task))) Task;
+        task->task = func;
+        task->args = args;
+
+        this->tpool->enqueue(*task);
+    }
+
 public:
-    Server(short port, std::string ip);
+    Server(short port, std::string ip, int max_threads=DEFAULT_MAX_THREADS, int backlog=DEFAULT_BACKLOG);
     ~Server();
 
     void clisten();

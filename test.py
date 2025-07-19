@@ -2,7 +2,8 @@ import requests
 import time
 
 SERVER_URL = "http://192.168.1.28:8080"
-NUM_REQUESTS = 10000
+NUM_REQUESTS = 20000
+WAIT_TIME = 100
 
 def main():
     response_times = []
@@ -18,6 +19,9 @@ def main():
         elapsed = end - start
         response_times.append(elapsed)
         print(f"Request {i+1}: {(elapsed * 1000):.2f} milliseconds")
+        if (i + 1) % 1000 == 0:
+            print('-' * 100)
+            time.sleep(WAIT_TIME / 1000)
     if response_times:
         avg = sum(response_times) / len(response_times)
         print(f"Average response time: {(avg * 1000):.2f} milliseconds")
