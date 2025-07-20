@@ -17,7 +17,11 @@ To setup CppServer, There are a couple things to do:
 
 (Optional) Stress test CppServer
 1. Enter test.py, changing 'SERVER_URL = "http://192.168.1.28:8080"' to 'SERVER_URL = "http://&lt;your ip address&gt;:8080"', replacing &lt;your ip address&gt; with your machine's actual IP
-2. Exit, then run 'python3 test.py' in a different terminal window than CppServer
+2. Exit, then create a python virtual environment with 'python3 -m venv .venv'
+3. Run the virtual environment with 'source .venv/bin/activate'
+4. Install packages 'pip install requests matplotlib'
+5. Run it 'python3 test.py'
+6. To exit the virtual environment, type 'deactivate
 
 ```bash
 make     # Compile the code
@@ -25,7 +29,11 @@ make run # Run CppServer
 
 # In a separate terminal window...
 
-# Stress test CppServer
+python3 -m venv .venv
+source .venv/bin/activate
+pip install requests matplotlib
 python3 test.py
 
+# To exit
+deactivate
 ```
