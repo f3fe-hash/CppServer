@@ -12,11 +12,11 @@ Setup
 -----
 To setup CppServer, There are a couple things to do:
 1. Enter src/main.cpp with your favorite text editor (vim, vi, vscode, etc.)
-2. Change 'new Server(8080, "192.168.1.28")' to 'new Server(8080, "<your ip address>")', replacing <your ip address> with your machine's actual IP
+2. Change 'new Server(8080, "192.168.1.28")' to 'new Server(8080, "&lt;your ip address&gt;")', replacing &lt;your ip address&gt; with your machine's actual IP
 3. Type make to compile the code, then make run to run it
 
 (Optional) Stress test CppServer
-1. Enter test.py, changing 'SERVER_URL = "http://192.168.1.28:8080"' to 'SERVER_URL = "http://<your ip address>:8080"', replacing <your ip address> with your machine's actual IP
+1. Enter test.py, changing 'SERVER_URL = "http://192.168.1.28:8080"' to 'SERVER_URL = "http://&lt;your ip address&gt;:8080"', replacing &lt;your ip address&gt; with your machine's actual IP
 2. Exit, then run 'python3 test.py' in a different terminal window than CppServer
 
 ```bash
