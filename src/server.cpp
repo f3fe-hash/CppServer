@@ -5,6 +5,8 @@ Log_t* _error_log = NULL;
 
 Allocator* _alloc = NULL;
 
+HTTP* Server::httphandler = nullptr;
+
 Server::Server(short port, std::string ip, int max_threads, int backlog)
 {
     this->port = port;
@@ -12,24 +14,29 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
     this->num_clients = 0;
     this->running = true;
 
-    _alloc = new Allocator(ALLOC_SIZE);
-    this->tpool = new ThreadPool(max_threads);
+    _alloc                  = new Allocator(ALLOC_SIZE);
+    this->tpool             = new ThreadPool(max_threads);
+    if (Server::httphandler == nullptr)
+        Server::httphandler = new HTTP();
 
     open_log(&_info_log, "info.log");
     open_log(&_error_log, "error.log");
+
+    // Hide console cursor
+    printf("\e[?25l"); 
   
     // Create socket and verify it is open
     this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (this->sockfd == -1)
     {
         server_log(_error_log, "Socket creation failed");
-        FATAL("Socket creation failed");
+        FATAL("Socket creation failed\n");
         exit(0);
     }
     else
     {
         server_log(_info_log, "Socket successfully created");
-        OK("Socket created sucessfully");
+        OK("Socket created sucessfully\n");
     }
   
     // Assign ip and port
@@ -50,42 +57,42 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
     {
         // Sometimes you won't get the error, so it is a 'note' not 'fatal'
         server_log(_error_log, "Failed to set socket options");
-        INFO("Failed to set socket options");
+        INFO("Failed to set socket options\n");
     }
     else
     {
-        OK("Set socket options");
+        OK("Set socket options\n");
     }
   
     // Binding newly created socket to given IP and verification
     if ((bind(this->sockfd, (struct sockaddr *)&this->servaddr, sizeof(this->servaddr))) != 0)
     {
         server_log(_error_log, "Socket bind failed");
-        FATAL("Socket bind failed");
+        FATAL("Socket bind failed\n");
         exit(0);
     }
     else
     {
         server_log(_info_log, "Socket successfully bound");
-        OK("Socket successfully bound");
+        OK("Socket successfully bound\n");
     }
   
     // Now server is ready to listen and verification
     if (listen(this->sockfd, backlog) != 0)
     {
         server_log(_error_log, "Listen failed");
-        FATAL("Listen failed");
+        FATAL("Listen failed\n");
         exit(0);
     }
     else
     {
         server_log(_info_log, "Server listening");
-        OK("Server listening");
+        OK("Server listening\n");
     }
     
-    OK("Server UP");
-    INFO("Server\t[IP: %s | Port: %d] ( http://%s:%d )", ip.c_str(), port, ip.c_str(), port);
-    printf("%s----------------------------------------------------------------------------%s\n", COLOR_BLUE, COLOR_RESET);
+    OK("Server UP\n");
+    INFO("Server: http://%s:%d\n", ip.c_str(), port);
+    printf("%s----------------------------------------------%s\n", COLOR_BLUE, COLOR_RESET);
 }
 
 Server::~Server()
@@ -94,11 +101,8 @@ Server::~Server()
 
     // Disconnect, and stop allocating threads
     close(this->sockfd);
-    if (this->listener->joinable())
-        this->listener->join();
     
-    // Dwallocate threads (client threadsa are already deallocated by the deallocator)
-    _alloc->deallocate((void *)this->listener);
+    // Deallocate threads (client threads are already deallocated by the deallocator thread)
     
     // Deallocate logs
     if (_info_log)
@@ -111,8 +115,11 @@ Server::~Server()
         if (_error_log->name) free(_error_log->name);
         free(_error_log);
     }
+
+    // Show the cursor again
+    printf("\033[?25h");
     
-    OK("Stopped the server");
+    OK("Stopped the server\n");
 }
 
 // Client Listen (To not be confused with sys/socket.h's listen function)
@@ -128,13 +135,13 @@ void Server::clisten()
 void Server::stop()
 {
     this->running = false;
-    OK("Stopped the server");
+    OK("Stopped the server\n");
 }
 
 void Server::start()
 {
     this->running = true;
-    OK("Started the server");
+    OK("Started the server\n");
 }
 
 void Server::_listen(Server* _this)
@@ -211,10 +218,13 @@ void Server::_climanager(Server* _this)
 void Server::handle_client(ClientArgs* args)
 {
     // Alert the server that there is a new client
-    INFO("New client (#%d)", args->cli->clinum + 1);
+    INFO("New client (#%d)\r", args->cli->clinum + 1);
 
     // Create and send the response
-    Response* res = generate_http_response(MESSAGE);
+    //
+    // Use const char* instead of std::string because HTTP::generate_response
+    // will serialize the std::string object, which is not good
+    HTTPResponse* res = Server::httphandler->generate_response<const char *>(200, MESSAGE);
     if (!res || !res->data)
     {
         args->server->running = false;
@@ -241,35 +251,6 @@ void Server::handle_client(ClientArgs* args)
     _alloc->deallocate((void *)args);
 
     return;
-}
-
-Response* Server::generate_http_response(const char* msg)
-{
-    // Calculate the length of the response
-    int content_length = strlen(msg);
-    int size = 96 + content_length; // Header size (85) + Max decimal places for length of content (10) + message size + Null terminalor (1)
-
-    // Create the response, and set up the values
-    Response* res = new (_alloc->allocate(sizeof(Response))) Response();
-    res->data = (char *)_alloc->allocate(size);
-
-    if (!res->data)
-    {
-        //_alloc->deallocate(res);     Nope! don't deallocate a NULL pointer
-        return nullptr;
-    }
-
-    res->size = snprintf(res->data, size,
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: %d\r\n"
-        "Connection: close\r\n"
-        "\r\n"
-        "%s",
-        content_length, msg);
-    
-    // Return the response
-    return res;
 }
 
 void Server::handle_client_wrapper(void* arg)

@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <queue>
+#include <unordered_map>
 
 #include <thread>
 #include <mutex>
@@ -20,12 +21,14 @@
 #include <cmath>
 
 #include "log.h"
+#include "lexer.h"
+#include "http.hpp"
 #include "memory.hpp"
 #include "threads.hpp"
 
 #define MESSAGE "Hello World!"
 
-#define ALLOC_SIZE 32 * MiB
+#define ALLOC_SIZE 64 * MiB
 
 #define DEFAULT_MAX_THREADS 500 // 500 threads maximum as default
 #define DEFAULT_BACKLOG 128
@@ -38,12 +41,6 @@ typedef struct
     int clinum;
     struct sockaddr_in addr;
 } Client;
-
-typedef struct
-{
-    char* data;
-    ssize_t size;
-} Response;
 
 typedef struct
 {
@@ -76,21 +73,18 @@ class Server
     std::mutex threads_mutex;
 
     // Specific-job threads
-    std::thread* listener;      // Listens to and accepts clients
-    std::thread* clientmanager; // Manages clients to make sure that there aren't too many threads running at once
 
     ThreadPool* tpool;
+    static HTTP* httphandler;
 
     // Multi-threading functions
     static void handle_client(ClientArgs* client);
     static void _listen(Server* _this);
     static void _climanager(Server* _this);
 
-    static Response* generate_http_response(const char* msg);
-
     static void handle_client_wrapper(void* arg);
 
-    inline void new_thread(void (*func)(void*), void* args)
+    inline void new_thread(void (*func)(void *), void* args)
     {
         Task* task = new (_alloc->allocate(sizeof(Task))) Task;
         task->task = func;

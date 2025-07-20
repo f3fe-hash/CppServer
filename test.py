@@ -2,7 +2,7 @@ import requests
 import time
 
 SERVER_URL = "http://192.168.1.28:8080"
-NUM_REQUESTS = 20000
+NUM_REQUESTS = 40000
 WAIT_TIME = 100
 
 def main():

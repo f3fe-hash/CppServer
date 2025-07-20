@@ -19,9 +19,9 @@
 #define COLOR_RESET "\033[0m"
 #define COLOR_BOLD  "\033[1m"
 
-#define OK(fmt, ...)   printf("%s[  OK  ] ", COLOR_GREEN); printf(fmt, ##__VA_ARGS__); printf("%s\n", COLOR_RESET)
-#define INFO(fmt, ...) printf("%s[ INFO ] ", COLOR_YELLOW); printf(fmt, ##__VA_ARGS__); printf("%s\n", COLOR_RESET)
-#define FATAL(fmt, ...) printf("%s%s[ FATL ] ", COLOR_RED, COLOR_BOLD); printf(fmt, ##__VA_ARGS__); printf("%s\n", COLOR_RESET)
+#define OK(fmt, ...)   printf("%s[  OK  ] ", COLOR_GREEN); printf(fmt, ##__VA_ARGS__); printf("%s", COLOR_RESET)
+#define INFO(fmt, ...) printf("%s[ INFO ] ", COLOR_YELLOW); printf(fmt, ##__VA_ARGS__); printf("%s", COLOR_RESET)
+#define FATAL(fmt, ...) printf("%s%s[ FATL ] ", COLOR_RED, COLOR_BOLD); printf(fmt, ##__VA_ARGS__); printf("%s", COLOR_RESET)
 
 #ifdef __cplusplus
 extern "C"
