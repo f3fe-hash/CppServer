@@ -13,5 +13,7 @@ int main(int argc, char** argv)
     usleep(200000000); // 2s00,000,000 us, or 200 sec
 
     delete server;
+    server = nullptr;
+    
     return 0;
 }

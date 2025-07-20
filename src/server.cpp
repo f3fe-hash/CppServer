@@ -5,7 +5,8 @@ Log_t* _error_log = NULL;
 
 Allocator* _alloc = NULL;
 
-HTTP* Server::httphandler = nullptr;
+HTTP*   Server::httphandler = nullptr;
+Server* Server::serverinst  = nullptr;
 
 Server::Server(short port, std::string ip, int max_threads, int backlog)
 {
@@ -16,8 +17,11 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
 
     _alloc                  = new Allocator(ALLOC_SIZE);
     this->tpool             = new ThreadPool(max_threads);
+
     if (Server::httphandler == nullptr)
         Server::httphandler = new HTTP();
+    if (Server::serverinst == nullptr)
+        Server::serverinst = this;
 
     open_log(&_info_log, "info.log");
     open_log(&_error_log, "error.log");
@@ -67,8 +71,15 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
     // Binding newly created socket to given IP and verification
     if ((bind(this->sockfd, (struct sockaddr *)&this->servaddr, sizeof(this->servaddr))) != 0)
     {
+        // Log the issue
         server_log(_error_log, "Socket bind failed");
         FATAL("Socket bind failed\n");
+
+        // Notify thr user of the most common (If not only) reason for the issue
+        INFO("The error might be because of incorrect IP address.\n");
+        INFO("Read README.md to see how to fix the issue\n");
+
+        // Can't do anything with incorrect IP address. Exits
         exit(0);
     }
     else
@@ -89,6 +100,8 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
         server_log(_info_log, "Server listening");
         OK("Server listening\n");
     }
+
+    std::signal(SIGINT, Server::sigExit);
     
     OK("Server UP\n");
     INFO("Server: http://%s:%d\n", ip.c_str(), port);
@@ -101,8 +114,6 @@ Server::~Server()
 
     // Disconnect, and stop allocating threads
     close(this->sockfd);
-    
-    // Deallocate threads (client threads are already deallocated by the deallocator thread)
     
     // Deallocate logs
     if (_info_log)
@@ -120,6 +131,16 @@ Server::~Server()
     printf("\033[?25h");
     
     OK("Stopped the server\n");
+}
+
+void Server::sigExit(int signum)
+{
+    // Make gcc happy (:
+    (void)signum;
+
+    // Destroy the server
+    OK("Terminating...\n");
+    serverinst->~Server();
 }
 
 // Client Listen (To not be confused with sys/socket.h's listen function)
@@ -203,7 +224,7 @@ void Server::_climanager(Server* _this)
                 // Allocate task with args using your allocator
                 ClientArgs* args = new (_alloc->allocate(sizeof(ClientArgs))) ClientArgs();
                 args->cli = cli;
-                args->server = _this;
+                serverinst = _this;
 
                 // Create Task for thread pool
                 Task* task = new_task(reinterpret_cast<void(*)(void *)>(Server::handle_client_wrapper), (void *)args);
@@ -227,11 +248,11 @@ void Server::handle_client(ClientArgs* args)
     HTTPResponse* res = Server::httphandler->generate_response<const char *>(200, MESSAGE);
     if (!res || !res->data)
     {
-        args->server->running = false;
+        serverinst->running = false;
         server_log(_error_log, "Failed to generate HTTP response");
         FATAL("Failed to generate HTTP response");
         if (args->cli) _alloc->deallocate((void *)args->cli);
-        args->server->running = true;
+        serverinst->running = true;
         return;
     }
     ssize_t sent = send(args->cli->connfd, res->data, res->size, 0);
@@ -242,7 +263,7 @@ void Server::handle_client(ClientArgs* args)
     }
     close(args->cli->connfd);
 
-    args->server->num_clients--;
+    serverinst->num_clients--;
 
     // Deallocate the response
     _alloc->deallocate((void *)res->data);

@@ -20,6 +20,8 @@
 
 #include <cmath>
 
+#include <csignal>
+
 #include "log.h"
 #include "lexer.h"
 #include "http.hpp"
@@ -44,7 +46,6 @@ typedef struct
 
 typedef struct
 {
-    Server* server;
     Client* cli;
 } ClientArgs;
 
@@ -77,6 +78,8 @@ class Server
     ThreadPool* tpool;
     static HTTP* httphandler;
 
+    static Server* serverinst;
+
     // Multi-threading functions
     static void handle_client(ClientArgs* client);
     static void _listen(Server* _this);
@@ -100,6 +103,9 @@ public:
     void clisten();
     void stop();
     void start();
+
+    // Handle Ctrl-C appropriately
+    static void sigExit(int signum);
 };
 
 #endif
