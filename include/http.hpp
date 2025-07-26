@@ -24,7 +24,7 @@ public:
     ~HTTP();
 
     template <typename T>
-    static HTTPResponse* generate_response(int error_code, T data)
+    static HTTPResponse* generate_response(int error_code, T data) __THROW
     {
         const void* _data = static_cast<const void *>(data);
 

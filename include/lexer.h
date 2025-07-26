@@ -9,7 +9,7 @@ extern "C"
 {
 #endif
 
-const char** parse_str(const char* str, const char deliminator);
+const char** parse_str(const char* str, const char deliminator) __THROW __nonnull((1));
 
 #ifdef __cplusplus
 }

@@ -30,9 +30,9 @@
 
 #define MESSAGE "Hello World!"
 
-#define ALLOC_SIZE 64 * MiB
+#define ALLOC_SIZE 128 * MiB
 
-#define DEFAULT_MAX_THREADS 500 // 500 threads maximum as default
+#define DEFAULT_MAX_THREADS 1000 // 1k threads maximum as default
 #define DEFAULT_BACKLOG 128
 
 class Server;

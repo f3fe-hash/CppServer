@@ -1,8 +1,8 @@
 # Compilers and flags
 CC       := gcc
 CXX      := g++
-CCFLAGS  := -Wall -Wextra -std=c11
-CXXFLAGS := -Wall -Wextra -std=c++11
+CCFLAGS  := -Wall -Wextra -std=c11 -Ofast
+CXXFLAGS := -Wall -Wextra -std=c++11 -Ofast
 
 # Directories
 SRC_DIR     := src
@@ -44,6 +44,10 @@ $(BUILD_DIR):
 
 $(TARGET_DIR):
 	mkdir -p $(TARGET_DIR)
+
+test:
+	@$(CXX) test.cpp -o test
+	@./test
 
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET_DIR)

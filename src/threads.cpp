@@ -1,6 +1,6 @@
 #include "threads.hpp"
 
-ThreadPool::ThreadPool(size_t threads) : stop(false)
+ThreadPool::ThreadPool(size_t threads) __THROW : stop(false)
 {
     for(size_t i = 0; i < threads; ++i)
     {
@@ -31,7 +31,7 @@ ThreadPool::ThreadPool(size_t threads) : stop(false)
     }
 }
 
-ThreadPool::~ThreadPool()
+ThreadPool::~ThreadPool() __THROW
 {
     {
         std::unique_lock<std::mutex> lock(queue_mutex);
@@ -56,7 +56,7 @@ void ThreadPool::enqueue(Task task)
 
 // C++ style enqueue: converts function + args to raw Task
 template<class F, class... Args>
-auto ThreadPool::enqueue_cpp(F&& f, Args&&... args)
+auto ThreadPool::enqueue_cpp(F&& f, Args&&... args) __THROW
     -> std::future<typename std::result_of<F(Args...)>::type>
 {
     using return_type = typename std::result_of<F(Args...)>::type;
@@ -81,4 +81,12 @@ auto ThreadPool::enqueue_cpp(F&& f, Args&&... args)
 
     enqueue(task);
     return res;
+}
+
+Task* new_task(void (*func)(void*), void* args) __THROW
+{
+    Task* task = new (_alloc->allocate(sizeof(Task))) Task;
+    task->task = func;
+    task->args = args;
+    return task;
 }

@@ -4,12 +4,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
-
 #include <string.h>
 
+#include <errno.h>
 #include <unistd.h>
 
-#define LOG_DIR "log/"
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#include "files.h"
+
+//#define DEBUG
+
+#define LOG_PATH            "~/.cppserver/CppServerFiles/log"
+#define LOG_PATH_MAX_LENGTH 51 // 21 for LOG_PATH, 15 for home expansi0on, and 15 for filename
+#define MAX_LOG_BUFFER      1024
 
 #define COLOR_RED    "\033[31m"
 #define COLOR_YELLOW "\033[33m"
@@ -34,8 +43,10 @@ typedef struct
     FILE* _log;
 } Log_t;
 
-void server_log(Log_t* log, const char* msg, ...);
-void open_log(Log_t** log, const char* name);
+int mkdir_p(const char* dir) __THROW __nonnull((1));
+
+void server_log(Log_t* log, const char* msg, ...) __THROW __nonnull((1, 2));
+void open_log(Log_t** log, const char* name) __THROW __nonnull((1, 2));
 
 #ifdef __cplusplus
 }

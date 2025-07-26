@@ -29,12 +29,12 @@ class Allocator
 
     MemoryBlock_* free_list;
 public:
-    Allocator(std::size_t size);
-    ~Allocator();
+    Allocator(std::size_t size) __THROW;
+    ~Allocator() __THROW;
 
-    void* allocate(std::size_t size);
-    void* reallocate(void* ptr, std::size_t new_size);
-    void  deallocate(void* ptr);
+    // Reallocate isn't necessary
+    void* allocate(std::size_t size) __THROW;
+    void  deallocate(void* ptr) __THROW __nonnull((1));
 };
 
 #endif

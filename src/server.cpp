@@ -194,7 +194,7 @@ void Server::_listen(Server* _this)
         }
         else
         {
-            server_log(_info_log, "Accepted new client");
+            //server_log(_info_log, "Accepted new client");
         }
 
         cli->clinum = _this->num_total_clients;

@@ -32,24 +32,18 @@ class ThreadPool
     bool stop;
 
 public:
-    ThreadPool(size_t max_threads);
-    ~ThreadPool();
+    ThreadPool(size_t max_threads) __THROW;
+    ~ThreadPool() __THROW;
 
     // Enqueue a raw Task (C-style)
     void enqueue(Task task);
 
     // Enqueue using C++ function and arguments
     template<class F, class... Args>
-    auto enqueue_cpp(F&& f, Args&&... args)
+    auto enqueue_cpp(F&& f, Args&&... args) __THROW
         -> std::future<typename std::result_of<F(Args...)>::type>;
 };
 
-inline Task* new_task(void (*func)(void*), void* args)
-{
-    Task* task = new (_alloc->allocate(sizeof(Task))) Task;
-    task->task = func;
-    task->args = args;
-    return task;
-}
+Task* new_task(void (*func)(void*), void* args) __THROW __nonnull((1));
 
 #endif

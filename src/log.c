@@ -1,70 +1,168 @@
 #include "log.h"
 
-void server_log(Log_t* log, const char* msg, ...)
+__THROW __nonnull((1)) int mkdir_p(const char* dir)
 {
-    int n = 0;
-    size_t size = 0;
+    char tmp[LOG_PATH_MAX_LENGTH];
     char* p = NULL;
-    va_list ap;
+    size_t len;
 
-    va_start(ap, msg);
-    n = vsnprintf(p, size, msg, ap);
-    va_end(ap);
+    len = strlen(dir);
+    if (len >= sizeof(tmp))
+        return -1;
 
-    if (n < 0)
-        return;
+    strcpy(tmp, dir);
 
-    size = (size_t) n + 1;
-    p = malloc(size);
+    // Remove trailing slash if any
+    if (tmp[len - 1] == '/')
+        tmp[len - 1] = 0;
 
-    if (p == NULL)
-        return;
-
-    va_start(ap, msg);
-    n = vsnprintf(p, size, msg, ap);
-    va_end(ap);
-
-    if (n < 0)
+    for (p = tmp + 1; *p; p++)
     {
-        free(p);
-        return;
+        if (*p == '/')
+        {
+            *p = 0;
+            if (mkdir(tmp, 0755) != 0)
+                if (errno != EEXIST) return -1;
+            *p = '/';
+        }
     }
+    // Create final directory
+    if (mkdir(tmp, 0755) != 0)
+        if (errno != EEXIST)
+            return -1;
 
-    chdir(LOG_DIR);
-    log->_log = fopen(log->name, "a");
-    if (log->_log != NULL)
-    {
-        fprintf(log->_log, "%s\n", p);
-        fclose(log->_log);
-    }
-    chdir("..");
-    
-    free(p);
+    return 0;
 }
 
-void open_log(Log_t** log, const char* name)
+__THROW __nonnull((1, 2)) void server_log(Log_t* log, const char* msg, ...)
 {
-    // Go to the directory
-    chdir(LOG_DIR);
+#ifdef DEBUG
+    printf("In server_log\n");
+#endif
+    char stack_buf[MAX_LOG_BUFFER];
+    char* buf = stack_buf;
+    int n;
+    va_list ap;
 
-    // Allocate the log, and set its name
-    *log = malloc(sizeof(Log_t));
-    if (*log == NULL) return;
-    (*log)->name = malloc(strlen(name) + 1);
-    if ((*log)->name == NULL)
+    // Try writing to stack buffer
+    va_start(ap, msg);
+    n = vsnprintf(buf, MAX_LOG_BUFFER, msg, ap);
+    va_end(ap);
+
+    if (n < 0)
+        return;
+
+    // Message was too large for stack buffer, allocate heap buffer instead
+    if ((size_t)n >= MAX_LOG_BUFFER)
     {
-        free(*log);
+        printf("Doing heap allocation\n");
+
+        buf = malloc(n + 1);
+        if (!buf)
+            return;
+
+        va_start(ap, msg);
+        vsnprintf(buf, n + 1, msg, ap);
+        va_end(ap);
+    }
+
+    // Construct full path to log file
+    char full_path[LOG_PATH_MAX_LENGTH];
+    int len = snprintf(full_path, sizeof(full_path), "%s/%s", LOG_PATH, log->name);
+
+    // Ensure that the path is correct
+    if ((size_t)len >= LOG_PATH_MAX_LENGTH)
+    {
+        printf("Path was truncated\n");
+
+        // Path was truncated - could log or silently fail
+        if (buf != stack_buf) free(buf);
+        return;
+    }
+
+    write_file(full_path, buf, strlen(buf));
+
+    if (buf != stack_buf)
+        free(buf);
+}
+
+
+__THROW __nonnull((1, 2)) void open_log(Log_t** log, const char* name)
+{
+#ifdef DEBUG
+    printf("In open_log\n");
+#endif
+
+    // Allocate Log_t
+    Log_t* new_log = malloc(sizeof(Log_t));
+    if (!new_log) return;
+
+    // Copy log name
+    new_log->name = malloc(strlen(name) + 1);
+    if (!new_log->name)
+    {
+#ifdef DEBUG
+        printf("Name allocation failed\n");
+#endif
+        free(new_log);
         *log = NULL;
         return;
     }
-    strcpy((*log)->name, name);
+    strcpy(new_log->name, name);
 
-    // Delete any existing log file
-    remove(name);
+    // Handle path expansion for ~ in LOG_PATH
+    char* expanded_log_path = (char*)resolve_filename(LOG_PATH);
+    if (!expanded_log_path)
+    {
+#ifdef DEBUG
+        printf("Failed to resolve log path\n");
+#endif
+        free(new_log->name);
+        free(new_log);
+        *log = NULL;
+        return;
+    }
 
-    // Create the log
-    (*log)->_log = fopen(name, "a");
-    fclose((*log)->_log);
+    // Construct full file path (directory + filename)
+    char full_path[LOG_PATH_MAX_LENGTH];
+    int len = snprintf(full_path, sizeof(full_path), "%s/%s", expanded_log_path, name);
+    if (len < 0 || (size_t)len >= sizeof(full_path))
+    {
+#ifdef DEBUG
+        printf("Full path too long or snprintf error\n");
+#endif
+        free(new_log->name);
+        free(new_log);
+        *log = NULL;
+        return;
+    }
 
-    chdir("..");
+    // Create the directory if it doesn't exist
+    if (mkdir_p(expanded_log_path) != 0)
+    {
+#ifdef DEBUG
+        printf("Failed to create directory: %s\n", expanded_log_path);
+#endif
+        free(new_log->name);
+        free(new_log);
+        *log = NULL;
+        return;
+    }
+
+    // Now open the file for append (create if doesn't exist)
+    FILE* fp = fopen(full_path, "a");
+    if (!fp)
+    {
+#ifdef DEBUG
+        printf("Failed to open file '%s' for append: %s\n", full_path, strerror(errno));
+#endif
+        free(new_log->name);
+        free(new_log);
+        *log = NULL;
+        return;
+    }
+    fclose(fp);
+
+    new_log->_log = NULL;  // Not keeping file open here
+    *log = new_log;
 }
