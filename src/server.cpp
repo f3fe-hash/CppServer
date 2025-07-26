@@ -165,31 +165,27 @@ void Server::start()
     OK("Started the server\n");
 }
 
+void Server::subClient()
+{
+    this->num_clients--;
+}
+
 void Server::_listen(Server* _this)
 {
     // Listen to get connections, then create a thread to handle the connection
     while (_this->running == true)
     {
-        Client* cli = new (_alloc->allocate(sizeof(Client))) Client();
-        if (!cli)
-        {
-            _this->running = false;
-            server_log(_error_log, "Failed to allocate memory for Client structure");
-            FATAL("Failed to allocate memory for Client structure");
-            _this->running = true;
-            continue;
-        }
-        int len = sizeof(cli->addr);
+        int connfd;
+        struct sockaddr_in* addr = (sockaddr_in *)_alloc->allocate(sizeof(sockaddr_in));
+        int len = sizeof(addr);
 
         // Accept the data packet from client and verification 
-        cli->connfd = accept(_this->sockfd, (struct sockaddr *)&cli->addr, (socklen_t *)&len);
-        if (cli->connfd < 0)
+        connfd = accept(_this->sockfd, (struct sockaddr *)addr, (socklen_t *)&len);
+        if (connfd < 0)
         {
-            _this->running = false;
             server_log(_error_log, "Failed to accept client");
             FATAL("Failed to accept client");
-            _alloc->deallocate(cli);
-            _this->running = true;
+            _alloc->deallocate(addr);
             continue;
         }
         else
@@ -197,7 +193,13 @@ void Server::_listen(Server* _this)
             //server_log(_info_log, "Accepted new client");
         }
 
-        cli->clinum = _this->num_total_clients;
+        Client* cli = new (_alloc->allocate(sizeof(Client))) Client(connfd, _this->num_total_clients, addr, Server::httphandler);
+        if (!cli)
+        {
+            server_log(_error_log, "Failed to allocate memory for Client structure");
+            FATAL("Failed to allocate memory for Client structure");
+            continue;
+        }
 
         std::unique_lock<std::mutex> lock(_this->clients_mutex);
         _this->clients.push(cli);
@@ -223,59 +225,21 @@ void Server::_climanager(Server* _this)
 
                 // Allocate task with args using your allocator
                 ClientArgs* args = new (_alloc->allocate(sizeof(ClientArgs))) ClientArgs();
-                args->cli = cli;
-                serverinst = _this;
+                args->cli        = cli;
+                args->server     = _this;
 
                 // Create Task for thread pool
-                Task* task = new_task(reinterpret_cast<void(*)(void *)>(Server::handle_client_wrapper), (void *)args);
+                Task* task = new_task(reinterpret_cast<void(*)(void *)>(Server::handle_client), (void *)args);
 
                 _this->tpool->enqueue(*task);
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
     }
 }
 
-void Server::handle_client(ClientArgs* args)
+void Server::handle_client(void* args)
 {
-    // Alert the server that there is a new client
-    INFO("New client (#%d)\r", args->cli->clinum + 1);
-
-    // Create and send the response
-    //
-    // Use const char* instead of std::string because HTTP::generate_response
-    // will serialize the std::string object, which is not good
-    HTTPResponse* res = Server::httphandler->generate_response<const char *>(200, MESSAGE);
-    if (!res || !res->data)
-    {
-        serverinst->running = false;
-        server_log(_error_log, "Failed to generate HTTP response");
-        FATAL("Failed to generate HTTP response");
-        if (args->cli) _alloc->deallocate((void *)args->cli);
-        serverinst->running = true;
-        return;
-    }
-    ssize_t sent = send(args->cli->connfd, res->data, res->size, 0);
-    if (sent < 0)
-    {
-        server_log(_error_log, "send failed");
-        FATAL("send failed");
-    }
-    close(args->cli->connfd);
-
-    serverinst->num_clients--;
-
-    // Deallocate the response
-    _alloc->deallocate((void *)res->data);
-    _alloc->deallocate((void *)res);
-    _alloc->deallocate((void *)args->cli);
-    _alloc->deallocate((void *)args);
-
-    return;
-}
-
-void Server::handle_client_wrapper(void* arg)
-{
-    ClientArgs* args = (ClientArgs*)arg;
-    Server::handle_client(args);
+    ClientArgs* _args = (ClientArgs *)args;
+    _args->cli->handle(_args);
 }

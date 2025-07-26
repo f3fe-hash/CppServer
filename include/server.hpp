@@ -33,21 +33,31 @@
 #define ALLOC_SIZE 128 * MiB
 
 #define DEFAULT_MAX_THREADS 1000 // 1k threads maximum as default
-#define DEFAULT_BACKLOG 128
+#define DEFAULT_BACKLOG 256
 
 class Server;
-
-typedef struct
-{
-    int connfd;
-    int clinum;
-    struct sockaddr_in addr;
-} Client;
+class Client;
 
 typedef struct
 {
     Client* cli;
+    Server* server;
 } ClientArgs;
+
+class Client
+{
+public:
+    Client(int connfd, int clinum, sockaddr_in* addr, HTTP* httphandler);
+    ~Client();
+
+    static void handle(ClientArgs* args);
+
+    int connfd;
+    int clinum;
+    struct sockaddr_in* addr;
+
+    static HTTP* httphandler;
+};
 
 extern Log_t* _info_log;
 extern Log_t* _error_log;
@@ -70,22 +80,18 @@ class Server
     std::queue<Client *> clients; // Client queue
     std::queue<std::thread *> threads; // Queue of threads. Checked by deallocator to remove done threads
 
+    // Mutexes
     std::mutex clients_mutex;
     std::mutex threads_mutex;
 
-    // Specific-job threads
-
     ThreadPool* tpool;
+
     static HTTP* httphandler;
 
-    static Server* serverinst;
-
     // Multi-threading functions
-    static void handle_client(ClientArgs* client);
+    static void handle_client(void* args);
     static void _listen(Server* _this);
     static void _climanager(Server* _this);
-
-    static void handle_client_wrapper(void* arg);
 
     inline void new_thread(void (*func)(void *), void* args)
     {
@@ -100,9 +106,13 @@ public:
     Server(short port, std::string ip, int max_threads=DEFAULT_MAX_THREADS, int backlog=DEFAULT_BACKLOG);
     ~Server();
 
+    static Server* serverinst;
+
     void clisten();
     void stop();
     void start();
+
+    void subClient();
 
     // Handle Ctrl-C appropriately
     static void sigExit(int signum);

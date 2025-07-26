@@ -1,8 +1,8 @@
 # Compilers and flags
 CC       := gcc
 CXX      := g++
-CCFLAGS  := -Wall -Wextra -std=c11 -Ofast
-CXXFLAGS := -Wall -Wextra -std=c++11 -Ofast
+CCFLAGS  := -Wall -Wextra -std=c11 -Ofast -funroll-loops
+CXXFLAGS := -Wall -Wextra -std=c++11 -Ofast -funroll-loops
 
 # Directories
 SRC_DIR     := src
