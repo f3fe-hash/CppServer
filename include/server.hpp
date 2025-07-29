@@ -23,7 +23,6 @@
 #include <csignal>
 
 #include "log.h"
-#include "lexer.h"
 #include "http.hpp"
 #include "memory.hpp"
 #include "threads.hpp"
@@ -31,6 +30,10 @@
 #define MESSAGE "Hello World!"
 
 #define ALLOC_SIZE 128 * MiB
+
+#define REQUEST_BUFFER_SIZE    32768
+#define RESPONSE_FILEBUFF_LEN  8192
+#define RESPONSE_FILE_PATH_LEN 512
 
 #define DEFAULT_MAX_THREADS 1000 // 1k threads maximum as default
 #define DEFAULT_BACKLOG 256

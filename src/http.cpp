@@ -57,7 +57,16 @@ const std::unordered_map<int, std::string> errcode_strs =
 const int MAX_ERROR_CODE_LENGTH = 29;
 
 HTTP::HTTP()
-{}
+{
+    http_calc_regex();
+}
 
 HTTP::~HTTP()
-{}
+{
+    http_free_regex();
+}
+
+HTTPRequest* HTTP::parse_request(const char* raw, size_t size)
+{
+    return http_parse_request(raw, size);
+}

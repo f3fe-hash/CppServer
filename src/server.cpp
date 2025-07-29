@@ -232,14 +232,24 @@ void Server::_climanager(Server* _this)
                 Task* task = new_task(reinterpret_cast<void(*)(void *)>(Server::handle_client), (void *)args);
 
                 _this->tpool->enqueue(*task);
+
+                // Alert the user that there is a new client
+                INFO("New client (#%d)\r", _this->num_total_clients + 1);
             }
         }
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
+
+        // Pause to give the CPU a little break
+        //std::this_thread::sleep_for(std::chrono::microseconds(1));
+        // No!, INFO is enough of a overhead and IO break to work instead of std::this_thread::sleep_for
     }
 }
 
 void Server::handle_client(void* args)
 {
     ClientArgs* _args = (ClientArgs *)args;
+
     _args->cli->handle(_args);
+
+    _alloc->deallocate((void *)_args->cli);
+    _alloc->deallocate((void *)_args);
 }

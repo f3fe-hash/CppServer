@@ -15,24 +15,44 @@ Client::~Client()
 
 void Client::handle(ClientArgs* args)
 {
-    // Alert the server that there is a new client
-    INFO("New client (#%d)\r", args->cli->clinum + 1);
+    // Read the client's request
+    char buff[REQUEST_BUFFER_SIZE];
+    ssize_t size = read(args->cli->connfd, buff, REQUEST_BUFFER_SIZE);
+    if (size == 0)
+        return;
+    
+    // Parse the request with the HTTP handler
+    HTTPRequest* req = args->cli->httphandler->parse_request(buff, size);
+    char page[RESPONSE_FILE_PATH_LEN];
+    snprintf(page, RESPONSE_FILE_PATH_LEN, "site%.507s", req->path);
 
-    // Create and send the response
-    //
-    // Use const char* instead of std::string because HTTP::generate_response
-    // will serialize the std::string object, which is not good
-    HTTPResponse* res = args->cli->httphandler->generate_response<const char *>(200, MESSAGE);
+    char filebuff[RESPONSE_FILEBUFF_LEN];
+
+    // Read file contents
+    ssize_t fsize = read_file(page, filebuff, RESPONSE_FILEBUFF_LEN);
+
+    HTTPResponse* res = nullptr;
+
+    if (fsize <= 0)
+    {
+        static const char* not_found = "<h1>404 Not Found</h1>";
+        res = httphandler->generate_response<const char *>(404, not_found, 22);
+    }
+    else
+    {
+        filebuff[fsize] = '\0';  // Ensure null termination
+        res = httphandler->generate_response<const char *>(200, filebuff, fsize);
+    }
+
     if (!res || !res->data)
     {
         server_log(_error_log, "Failed to generate HTTP response");
         FATAL("Failed to generate HTTP response");
-        if (args->cli) _alloc->deallocate((void *)args->cli);
         return;
     }
 
-    signed long long int sent = send(args->cli->connfd, res->data, res->size, 0);
-    if (sent < 0)
+    size = send(args->cli->connfd, res->data, res->size, 0);
+    if (size == 0)
     {
         server_log(_error_log, "send failed");
         FATAL("send failed");
@@ -44,8 +64,6 @@ void Client::handle(ClientArgs* args)
     // Deallocate the response
     _alloc->deallocate((void *)res->data);
     _alloc->deallocate((void *)res);
-    _alloc->deallocate((void *)args->cli);
-    _alloc->deallocate((void *)args);
 
     return;
 }

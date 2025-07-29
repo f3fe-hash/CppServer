@@ -1,8 +1,16 @@
-# Compilers and flags
+# Compilers
 CC       := gcc
 CXX      := g++
-CCFLAGS  := -Wall -Wextra -std=c11 -Ofast -funroll-loops
-CXXFLAGS := -Wall -Wextra -std=c++11 -Ofast -funroll-loops
+
+# Compiler specs
+CVERSION   := -std=c11
+CPPVERSION := -std=c++11
+WARNFLAGS  := -Wall -Wextra -Wpedantic
+OPTFLAGS   := -Ofast -funroll-loops
+
+# Flags
+CCFLAGS    := $(WARNFLAGS) $(OPTFLAGS) $(CVERSION)
+CXXFLAGS   := $(WARNFLAGS) $(OPTFLAGS) $(CPPVERSION)
 
 # Directories
 SRC_DIR     := src
@@ -29,6 +37,7 @@ $(TARGET_DIR)/$(TARGET): $(OBJ) $(TARGET_DIR)
 	$(CXX) $(CXXFLAGS) $(OBJ) -o $(TARGET_DIR)/$(TARGET)
 
 	@mkdir -p $(TARGET_DIR)/log/
+	@cp -r site target/
 
 # Compile .c.o files
 $(BUILD_DIR)/%.c.o: $(SRC_DIR)/%.c $(BUILD_DIR)

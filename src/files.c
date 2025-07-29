@@ -2,14 +2,16 @@
 
 __THROW __nonnull((1)) FILE* open_file(const char* filename, const char* mode)
 {
-    const char* name = resolve_filename(filename);
+    char* name = resolve_filename(filename);  // use char* (not const char*)
+    if (!name)
+        return NULL;
 
     FILE* fp = fopen(name, mode);
 
     if (!fp)
-    {
-        printf("Error opening file %s\n", filename);
-    }
+        printf("Error opening file %s\n", name);
+
+    free(name);  // Free the allocated string
 
     return fp;
 }
@@ -17,13 +19,23 @@ __THROW __nonnull((1)) FILE* open_file(const char* filename, const char* mode)
 __THROW __nonnull((1, 2)) ssize_t read_file(const char* filename, char* buff, ssize_t size)
 {
     FILE* fp = open_file(filename, "rb");
-    return fread(buff, 1, size, fp);
+    if (!fp)
+        return -1;
+
+    ssize_t n = fread(buff, 1, size, fp);
+    fclose(fp);  // Don't leak file handles
+    return n;
 }
 
 __THROW __nonnull((1, 2)) ssize_t write_file(const char* filename, char* buff, ssize_t size)
 {
     FILE* fp = open_file(filename, "wb");
-    return fwrite(buff, 1, size, fp);
+    if (!fp)
+        return -1;
+
+    ssize_t n = fwrite(buff, 1, size, fp);
+    fclose(fp);
+    return n;
 }
 
 __THROW __nonnull((1, 2)) ssize_t read_filef(FILE* file, char* buff, ssize_t size)

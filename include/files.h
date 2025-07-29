@@ -14,6 +14,10 @@ extern "C"
 #define ssize_t unsigned long long int
 #endif
 
+#ifndef size_t
+#define size_t unsigned long int
+#endif
+
 FILE* open_file(const char* filename, const char* mode) __THROW __nonnull((1, 2));
 
 ssize_t read_file  (const char* filename, char* buff, ssize_t size) __THROW __nonnull((1, 2));
