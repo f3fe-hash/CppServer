@@ -15,8 +15,8 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
     this->num_clients = 0;
     this->running = true;
 
-    _alloc                  = new Allocator(ALLOC_SIZE);
-    this->tpool             = new ThreadPool(max_threads);
+    _alloc      = new Allocator(ALLOC_SIZE);
+    this->tpool = new ThreadPool(max_threads);
 
     if (Server::httphandler == nullptr)
         Server::httphandler = new HTTP();
@@ -27,20 +27,22 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
     open_log(&_error_log, "error.log");
 
     // Hide console cursor
-    printf("\e[?25l"); 
+    printf("\033[?25l"); 
   
     // Create socket and verify it is open
     this->sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (this->sockfd == -1)
     {
+        // Use %s to shut up gcc
         server_log(_error_log, "Socket creation failed");
-        FATAL("Socket creation failed\n");
+        FATAL("%s", "Socket creation failed\n");
         exit(0);
     }
     else
     {
+        // Use %s to shut up gcc
         server_log(_info_log, "Socket successfully created");
-        OK("Socket created sucessfully\n");
+        OK("%s", "Socket created sucessfully\n");
     }
   
     // Assign ip and port
@@ -60,50 +62,56 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
     if (setsockopt(this->sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
     {
         // Sometimes you won't get the error, so it is a 'note' not 'fatal'
+        // Use %s to shut up gcc
         server_log(_error_log, "Failed to set socket options");
-        INFO("Failed to set socket options\n");
+        INFO("%s", "Failed to set socket options\n");
     }
     else
     {
-        OK("Set socket options\n");
+        // Use %s to shut up gcc
+        OK("%s", "Set socket options\n");
     }
   
     // Binding newly created socket to given IP and verification
     if ((bind(this->sockfd, (struct sockaddr *)&this->servaddr, sizeof(this->servaddr))) != 0)
     {
         // Log the issue
+        // Use %s to shut up gcc
         server_log(_error_log, "Socket bind failed");
-        FATAL("Socket bind failed\n");
+        FATAL("%s", "Socket bind failed\n");
 
-        // Notify thr user of the most common (If not only) reason for the issue
-        INFO("The error might be because of incorrect IP address.\n");
-        INFO("Read README.md to see how to fix the issue\n");
+        // Notify the user of the most common (If not only) reason for the issue
+        INFO("%s", "The error might be because of incorrect IP address.\n");
+        INFO("%s", "Read README.md to see how to fix the issue\n");
 
         // Can't do anything with incorrect IP address. Exits
         exit(0);
     }
     else
     {
+        // Use %s to shut up gcc
         server_log(_info_log, "Socket successfully bound");
-        OK("Socket successfully bound\n");
+        OK("%s", "Socket successfully bound\n");
     }
   
     // Now server is ready to listen and verification
     if (listen(this->sockfd, backlog) != 0)
     {
+        // Use %s to shut up gcc
         server_log(_error_log, "Listen failed");
-        FATAL("Listen failed\n");
+        FATAL("%s", "Listen failed\n");
         exit(0);
     }
     else
     {
+        // Use %s to shut up gcc
         server_log(_info_log, "Server listening");
-        OK("Server listening\n");
+        OK("%s", "Server listening\n");
     }
 
     std::signal(SIGINT, Server::sigExit);
     
-    OK("Server UP\n");
+    OK("%s", "Server UP\n"); // Use %s to shut up gcc
     INFO("Server: http://%s:%d\n", ip.c_str(), port);
     printf("%s----------------------------------------------%s\n", COLOR_BLUE, COLOR_RESET);
 }
@@ -134,7 +142,8 @@ Server::~Server()
     // Show the cursor again
     printf("\033[?25h");
     
-    OK("Stopped the server\n");
+    // Use %s to shut up gcc
+    OK("%s", "Stopped the server\n");
 }
 
 void Server::sigExit(int signum)
@@ -143,7 +152,8 @@ void Server::sigExit(int signum)
     (void)signum;
 
     // Destroy the server
-    OK("Terminating...\n");
+    // Use %s to shut up gcc
+    OK("%s", "Terminating...\n");
     serverinst->~Server();
 }
 
@@ -159,14 +169,16 @@ void Server::clisten()
 
 void Server::stop()
 {
+    // Use %s to shut up gcc
     this->running = false;
-    OK("Stopped the server\n");
+    OK("%s", "Stopped the server\n");
 }
 
 void Server::start()
 {
+    // Use %s to shut up gcc
     this->running = true;
-    OK("Started the server\n");
+    OK("%s", "Started the server\n");
 }
 
 void Server::subClient()
@@ -187,8 +199,9 @@ void Server::_listen(Server* _this)
         connfd = accept(_this->sockfd, (struct sockaddr *)addr, (socklen_t *)&len);
         if (connfd < 0)
         {
+            // Use %s to shut up gcc
             server_log(_error_log, "Failed to accept client");
-            FATAL("Failed to accept client");
+            FATAL("%s", "Failed to accept client");
             _alloc->deallocate(addr);
             continue;
         }
@@ -200,8 +213,9 @@ void Server::_listen(Server* _this)
         Client* cli = new (_alloc->allocate(sizeof(Client))) Client(connfd, _this->num_total_clients, addr, Server::httphandler);
         if (!cli)
         {
+            // Use %s to shut up gcc
             server_log(_error_log, "Failed to allocate memory for Client structure");
-            FATAL("Failed to allocate memory for Client structure");
+            FATAL("%s", "Failed to allocate memory for Client structure");
             continue;
         }
 

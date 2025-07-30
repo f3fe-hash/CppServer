@@ -25,7 +25,10 @@ void Client::handle(ClientArgs* args)
     HTTPRequest* req = args->cli->httphandler->parse_request(buff, size);
     char page[RESPONSE_FILE_PATH_LEN];
     if (strcmp(req->path, "/") == 0)
-        memcpy(page, "site/index.html", RESPONSE_FILE_PATH_LEN);    // We already know the path, we don't need snprintf
+    {
+        strncpy(page, INDEX_FILE, sizeof(page));
+        page[RESPONSE_FILE_PATH_LEN - 1] = '\0';  // Ensure null-termination
+    }
     else
         snprintf(page, RESPONSE_FILE_PATH_LEN, "site%.507s", req->path);
 
@@ -48,16 +51,18 @@ void Client::handle(ClientArgs* args)
 
     if (!res || !res->data)
     {
+        // Use %s to shut up gcc
         server_log(_error_log, "Failed to generate HTTP response");
-        FATAL("Failed to generate HTTP response");
+        FATAL("%s", "Failed to generate HTTP response");
         return;
     }
 
     size = send(args->cli->connfd, res->data, res->size, 0);
     if (size == 0)
     {
+        // Use %s to shut up gcc
         server_log(_error_log, "send failed");
-        FATAL("send failed");
+        FATAL("%s", "send failed");
     }
     close(args->cli->connfd);
 

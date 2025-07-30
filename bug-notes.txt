@@ -1,0 +1,16 @@
+
+Possible bug sources
+--------------------
+1. Possible issue is log.h with printf statements:
+    if (...)
+        OK(...)
+    
+    expands to
+    if (...)
+        printf()
+    printf()
+    printf()
+
+
+Current bugs
+------------

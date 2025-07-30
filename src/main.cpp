@@ -3,7 +3,7 @@
 
 int main(int argc, char** argv)
 {
-    // Make gcc happy (:
+    // Make gcc happy  with the -Wextra flag (:
     (void)argc;
     (void)argv;
 
@@ -11,8 +11,11 @@ int main(int argc, char** argv)
     server->clisten();
     while (true); // 200,000,000 us, or 200 sec
 
-    delete server;
-    server = nullptr;
+    if (server)
+    {
+        delete server;
+        server = nullptr;
+    }
     
     return 0;
 }

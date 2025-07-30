@@ -38,6 +38,8 @@
 #define DEFAULT_MAX_THREADS 1000 // 1k threads maximum as default
 #define DEFAULT_BACKLOG 256
 
+#define INDEX_FILE "site/index.html"
+
 class Server;
 class Client;
 
