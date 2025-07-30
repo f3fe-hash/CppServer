@@ -36,4 +36,4 @@ g++ test.cpp -o test
 Usage
 -----
 
-To use CppServer, you can add files to the site/ directory, and access them from the web. For example you can load site/index.html by going to '<your ip address>:8080/index.html'. There is already a basic index.html to test
+To use CppServer, you can add files to the site/ directory, and access them from the web. For example you can load site/index.html by going to '&lt;your ip address&gt;:8080/index.html'. There is already a basic index.html to test
