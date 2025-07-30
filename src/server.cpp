@@ -110,22 +110,26 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
 
 Server::~Server()
 {
-    this->running = false;
-
     // Disconnect, and stop allocating threads
     close(this->sockfd);
+    this->running = false;
     
     // Deallocate logs
     if (_info_log)
     {
-        if (_info_log->name) free(_info_log->name);
+        if (_info_log->name)
+            free(_info_log->name);
         free(_info_log);
     }
+
     if (_error_log)
     {
-        if (_error_log->name) free(_error_log->name);
+        if (_error_log->name)
+            free(_error_log->name);
         free(_error_log);
     }
+
+    delete this->tpool;
 
     // Show the cursor again
     printf("\033[?25h");
@@ -143,10 +147,10 @@ void Server::sigExit(int signum)
     serverinst->~Server();
 }
 
-// Client Listen (To not be confused with sys/socket.h's listen function)
+// Client Listen (To not be confused with sys/socket.h's listen function by g++)
 void Server::clisten()
 {
-    // Start a thread to listen to clients (doesn't count itself as a thread, so the deallocator thread doesn't deallocate it)
+    // Start a thread to listen to clients
     new_thread(reinterpret_cast<void(*)(void *)>(_listen), this);
 
     // Start a thread to manage client put in the queue

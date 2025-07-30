@@ -36,7 +36,7 @@ public:
         const void* _data = static_cast<const void *>(data);
 
         // Calculate the length of the response
-        int size = 94 + MAX_ERROR_CODE_LENGTH + datasize; // Header size (83) + Maximum error code length () + Max decimal places for length of content (10) + data size + Null terminalor (1)
+        int size = 94 + MAX_ERROR_CODE_LENGTH + datasize; // Header size (83) + Maximum error code length () + Max decimal places for length of content (10) + data size + HTTP method length Null terminalor (1)
 
         // Create the response, and set up the values
         HTTPResponse* res = new (_alloc->allocate(sizeof(HTTPResponse))) HTTPResponse;
@@ -49,7 +49,7 @@ public:
         }
 
         std::string errcode_str = errcode_strs.at(error_code);
-        const char* str = reinterpret_cast<const char*>(_data);
+        const char* str = reinterpret_cast<const char *>(_data);
 
         res->size = snprintf(res->data, size,
             "HTTP/1.1 %d %s\r\n"

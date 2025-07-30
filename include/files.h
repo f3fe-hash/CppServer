@@ -5,17 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/types.h>
+
 #ifdef __cplusplus
 extern "C"
 {
-#endif
-
-#ifndef ssize_t
-#define ssize_t unsigned long long int
-#endif
-
-#ifndef size_t
-#define size_t unsigned long int
 #endif
 
 FILE* open_file(const char* filename, const char* mode) __THROW __nonnull((1, 2));

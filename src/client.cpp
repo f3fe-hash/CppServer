@@ -24,11 +24,13 @@ void Client::handle(ClientArgs* args)
     // Parse the request with the HTTP handler
     HTTPRequest* req = args->cli->httphandler->parse_request(buff, size);
     char page[RESPONSE_FILE_PATH_LEN];
-    snprintf(page, RESPONSE_FILE_PATH_LEN, "site%.507s", req->path);
-
-    char filebuff[RESPONSE_FILEBUFF_LEN];
+    if (strcmp(req->path, "/") == 0)
+        memcpy(page, "site/index.html", RESPONSE_FILE_PATH_LEN);    // We already know the path, we don't need snprintf
+    else
+        snprintf(page, RESPONSE_FILE_PATH_LEN, "site%.507s", req->path);
 
     // Read file contents
+    char filebuff[RESPONSE_FILEBUFF_LEN];
     ssize_t fsize = read_file(page, filebuff, RESPONSE_FILEBUFF_LEN);
 
     HTTPResponse* res = nullptr;
