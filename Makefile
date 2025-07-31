@@ -16,7 +16,6 @@ CXXFLAGS   := $(WARNFLAGS) $(OPTFLAGS) $(CPPVERSION)
 SRC_DIR     := src
 INCLUDE_DIR := include
 BUILD_DIR   := build
-TARGET_DIR  := target
 
 # Files
 C_SRC   := $(wildcard $(SRC_DIR)/*.c)
@@ -30,14 +29,11 @@ TARGET := main
 
 .PHONY: all clean $(TARGET_DIR)/$(TARGET) $(TARGET_DIR) $(BUILD_DIR)
 
-all: $(TARGET_DIR)/$(TARGET)
+all: $(TARGET)
 
 # Link .o files into the target, and set up the environment
-$(TARGET_DIR)/$(TARGET): $(OBJ) $(TARGET_DIR)
-	$(CXX) $(CXXFLAGS) $(OBJ) -o $(TARGET_DIR)/$(TARGET)
-
-	@mkdir -p $(TARGET_DIR)/log/
-	@cp -r site target/
+$(TARGET): $(OBJ) $(TARGET_DIR)
+	$(CXX) $(CXXFLAGS) $(OBJ) -o $(TARGET)
 
 # Compile .c.o files
 $(BUILD_DIR)/%.c.o: $(SRC_DIR)/%.c $(BUILD_DIR)
@@ -51,16 +47,13 @@ $(BUILD_DIR):
 	@clear
 	mkdir -p $(BUILD_DIR)
 
-$(TARGET_DIR):
-	mkdir -p $(TARGET_DIR)
-
 test:
 	@$(CXX) test.cpp -o test
 	@./test
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET_DIR)
+	rm -rf $(BUILD_DIR) $(TARGET)
 
 run:
 	@clear
-	@cd $(TARGET_DIR); ./$(TARGET)
+	@./$(TARGET)

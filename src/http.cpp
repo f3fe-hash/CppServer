@@ -70,3 +70,33 @@ HTTPRequest* HTTP::parse_request(const char* raw, size_t size)
 {
     return http_parse_request(raw, size);
 }
+
+const char* HTTP::get_content_type(HTTPRequest* req, const char* filename)
+{
+    (void)req;
+
+    //const char* contentTypes = http_get_header(req, "Accept");
+    char* extension = (char *)strstr(filename, ".");
+
+    if (!extension)
+        return NULL;
+    
+    if (strcmp(extension, ".html") == 0)
+        return "text/html";
+    else if (strcmp(extension, ".css") == 0)
+        return "text/css";
+    else if (strcmp(extension, ".json") == 0)
+        return "application/json";
+    
+    // Images
+    else if (strcmp(extension, ".avif") == 0)
+        return "image/avif";
+    else if (strcmp(extension, ".webp") == 0)
+        return "image/webp";
+    else if (strcmp(extension, ".png") == 0)
+        return "image/png";
+    else if (strcmp(extension, ".svg") == 0)
+        return "image/svg";
+    else
+        return NULL;
+}

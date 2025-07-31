@@ -36,17 +36,23 @@ void Client::handle(ClientArgs* args)
     char filebuff[RESPONSE_FILEBUFF_LEN];
     ssize_t fsize = read_file(page, filebuff, RESPONSE_FILEBUFF_LEN);
 
+    char* contentType = (char *)httphandler->get_content_type(req, page);
+
     HTTPResponse* res = nullptr;
 
-    if (fsize <= 0)
+    if ((fsize <= 0) || !contentType)
     {
-        static const char* not_found = "<h1>404 Not Found</h1>";
-        res = httphandler->generate_response<const char *>(404, not_found, 22);
+        // 404.html
+        printf("404");
+        char filebuff[RESPONSE_FILEBUFF_LEN];
+        ssize_t fsize = read_file("site/404.html", filebuff, RESPONSE_FILEBUFF_LEN);
+        filebuff[fsize] = '\0';  // Ensure null termination
+        res = httphandler->generate_response<const char *>(404, (char *)"text/html", filebuff, fsize);
     }
     else
     {
         filebuff[fsize] = '\0';  // Ensure null termination
-        res = httphandler->generate_response<const char *>(200, filebuff, fsize);
+        res = httphandler->generate_response<const char *>(200, contentType, filebuff, fsize);
     }
 
     if (!res || !res->data)

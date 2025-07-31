@@ -27,6 +27,7 @@ __THROW void http_calc_regex()
     regex_ready = 1;
 }
 
+// Parse an HTTP Request
 __THROW __nonnull((1)) HTTPRequest* http_parse_request(const char* raw, ssize_t size)
 {
     if (!regex_ready)
@@ -50,7 +51,7 @@ __THROW __nonnull((1)) HTTPRequest* http_parse_request(const char* raw, ssize_t 
     if (regexec(&reqline, line, 4, matches, 0) != 0)
         return INVALID_REQUEST;
 
-    HTTPRequest* req = (HTTPRequest*)malloc(sizeof(HTTPRequest));
+    HTTPRequest* req = (HTTPRequest *)malloc(sizeof(HTTPRequest));
     if (!req)
         return INVALID_REQUEST;
 
@@ -135,6 +136,8 @@ __THROW __nonnull((1)) HTTPRequest* http_parse_request(const char* raw, ssize_t 
     return req;
 }
 
+
+// Get a header
 __THROW __nonnull((1, 2)) const char* http_get_header(HTTPRequest* req, const char* key)
 {
     for (int i = 0; i < req->header_count; ++i)
@@ -143,7 +146,7 @@ __THROW __nonnull((1, 2)) const char* http_get_header(HTTPRequest* req, const ch
     return NULL;
 }
 
-// Optional cleanup if you want to free the regex later
+// Free regex
 __THROW void http_free_regex()
 {
     if (regex_ready)

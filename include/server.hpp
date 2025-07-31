@@ -27,8 +27,6 @@
 #include "memory.hpp"
 #include "threads.hpp"
 
-#define MESSAGE "Hello World!"
-
 #define ALLOC_SIZE 128 * MiB
 
 #define REQUEST_BUFFER_SIZE    32768
