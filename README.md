@@ -4,7 +4,7 @@ CppServer
 CppServer is a fast C++ Server with multithreading and custom memory management via a custom-made memory pool. A Few of the features include:
 * Multithreading with a thread pool: This server supports multithreading, using a thread pool to avoid too mush CPU usage, and to not allocate more threads than necessary
 * HTTP support: The server supports HTTP, and is capable of sending HTML, JSON, CSS, AVIF, WEBP, PNG, and SVG to clients
-* If you run the server, it shows my (website's)[f3fe-hash.github.io/CppServer-Website] main page. It also contains files of other types to mess around with
+* If you run the server, it shows my [website's](f3fe-hash.github.io/CppServer-Website) main page. It also contains files of other types to mess around with
 
 
 Warnings
