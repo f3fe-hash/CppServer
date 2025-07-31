@@ -3,10 +3,13 @@ CppServer
 
 CppServer is a fast C++ Server with multithreading and custom memory management via a custom-made memory pool. A Few of the features include:
 * Multithreading with a thread pool: This server supports multithreading, using a thread pool to avoid too mush CPU usage, and to not allocate more threads than necessary
-* Custom memory pool: A Custom memory pool to speed up allocations, by default using 64 MiB (Approx. 67.1 MB)
 * HTTP support: The server supports HTTP, and is capable of sending HTML pages (CSS has to be incorporated into the HTML) to clients
 
-*Sidenote: CppServer currently only supports Linux, and has only been tested on Ubuntu 24.04.2 LTS
+
+Warnings
+--------
+* CppServer currently only supports Linux, and has only been tested on Ubuntu 24.04.2 LTS.
+* You need top Ctrl-C TWICE to exit, not once.
 
 Setup
 -----
