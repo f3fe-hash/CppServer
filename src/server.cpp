@@ -5,6 +5,7 @@ Log_t* _error_log = NULL;
 
 Allocator* _alloc = NULL;
 
+API*    Server::api         = nullptr;
 HTTP*   Server::httphandler = nullptr;
 Server* Server::serverinst  = nullptr;
 
@@ -18,6 +19,8 @@ Server::Server(short port, std::string ip, int max_threads, int backlog)
     _alloc      = new Allocator(ALLOC_SIZE);
     this->tpool = new ThreadPool(max_threads);
 
+    if (Server::api == nullptr)
+        Server::api = new NullAPI();
     if (Server::httphandler == nullptr)
         Server::httphandler = new HTTP();
     if (Server::serverinst == nullptr)
@@ -210,7 +213,7 @@ void Server::_listen(Server* _this)
             //server_log(_info_log, "Accepted new client");
         }
 
-        Client* cli = new (_alloc->allocate(sizeof(Client))) Client(connfd, _this->num_total_clients, addr, Server::httphandler);
+        Client* cli = new (_alloc->allocate(sizeof(Client))) Client(connfd, _this->num_total_clients, addr, Server::httphandler, Server::api);
         if (!cli)
         {
             // Use %s to shut up gcc
@@ -251,8 +254,8 @@ void Server::_climanager(Server* _this)
 
                 _this->tpool->enqueue(*task);
 
-                // Alert the user that there is a new client
-                INFO("New client (#%d)\r", _this->num_total_clients + 1);
+                // Alert the user that there is a new request
+                INFO("New request (#%d)\r", _this->num_total_clients + 1);
             }
         }
 
@@ -268,6 +271,9 @@ void Server::handle_client(void* args)
 
     _args->cli->handle(_args);
 
+    _args->cli->~Client();
+    _alloc->deallocate((void *)_args->cli->addr);
     _alloc->deallocate((void *)_args->cli);
     _alloc->deallocate((void *)_args);
+
 }

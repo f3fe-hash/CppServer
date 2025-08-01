@@ -8,9 +8,11 @@ CPPVERSION := -std=c++11
 WARNFLAGS  := -Wall -Wextra -Wpedantic
 OPTFLAGS   := -Ofast -funroll-loops
 
+DEBUGFLAGS := #-g
+
 # Flags
-CCFLAGS    := $(WARNFLAGS) $(OPTFLAGS) $(CVERSION)
-CXXFLAGS   := $(WARNFLAGS) $(OPTFLAGS) $(CPPVERSION)
+CCFLAGS    := $(WARNFLAGS) $(OPTFLAGS) $(CVERSION) $(DEBUGFLAGS)
+CXXFLAGS   := $(WARNFLAGS) $(OPTFLAGS) $(CPPVERSION) $(DEBUGFLAGS)
 
 # Directories
 SRC_DIR     := src
@@ -57,3 +59,7 @@ clean:
 run:
 	@clear
 	@./$(TARGET)
+
+debug:
+	@clear
+	@gdb $(TARGET)

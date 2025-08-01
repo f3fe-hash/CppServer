@@ -11,7 +11,7 @@ Allocator::Allocator(std::size_t size) __THROW
 
 Allocator::~Allocator() __THROW
 {
-    delete[] this->raw;
+    //delete[] this->raw;
 }
 
 // Can't figure out how to use freeblock logic. Use standard allocation and call it a day
@@ -23,5 +23,7 @@ void* Allocator::allocate(std::size_t size) __THROW
 // Can't figure out how to use freeblock logic. Use standard deallocation and call it a day
 void Allocator::deallocate(void* ptr) __THROW
 {
-    free(ptr);
+    if (ptr)
+        free(ptr);
+    ptr = nullptr;
 }

@@ -89,10 +89,6 @@ __THROW __nonnull((1, 2)) void server_log(Log_t* log, const char* msg, ...)
 
 __THROW __nonnull((1, 2)) void open_log(Log_t** log, const char* name)
 {
-#ifdef DEBUG
-    printf("In open_log\n");
-#endif
-
     // Allocate Log_t
     Log_t* new_log = malloc(sizeof(Log_t));
     if (!new_log) return;
@@ -101,9 +97,6 @@ __THROW __nonnull((1, 2)) void open_log(Log_t** log, const char* name)
     new_log->name = malloc(strlen(name) + 1);
     if (!new_log->name)
     {
-#ifdef DEBUG
-        printf("Name allocation failed\n");
-#endif
         free(new_log);
         *log = NULL;
         return;
@@ -114,9 +107,6 @@ __THROW __nonnull((1, 2)) void open_log(Log_t** log, const char* name)
     char* expanded_log_path = (char*)resolve_filename(LOG_PATH);
     if (!expanded_log_path)
     {
-#ifdef DEBUG
-        printf("Failed to resolve log path\n");
-#endif
         free(new_log->name);
         free(new_log);
         *log = NULL;
@@ -128,9 +118,6 @@ __THROW __nonnull((1, 2)) void open_log(Log_t** log, const char* name)
     int len = snprintf(full_path, sizeof(full_path), "%s/%s", expanded_log_path, name);
     if (len < 0 || (size_t)len >= sizeof(full_path))
     {
-#ifdef DEBUG
-        printf("Full path too long or snprintf error\n");
-#endif
         free(new_log->name);
         free(new_log);
         *log = NULL;
@@ -140,9 +127,6 @@ __THROW __nonnull((1, 2)) void open_log(Log_t** log, const char* name)
     // Create the directory if it doesn't exist
     if (mkdir_p(expanded_log_path) != 0)
     {
-#ifdef DEBUG
-        printf("Failed to create directory: %s\n", expanded_log_path);
-#endif
         free(new_log->name);
         free(new_log);
         *log = NULL;
@@ -153,9 +137,6 @@ __THROW __nonnull((1, 2)) void open_log(Log_t** log, const char* name)
     FILE* fp = fopen(full_path, "a");
     if (!fp)
     {
-#ifdef DEBUG
-        printf("Failed to open file '%s' for append: %s\n", full_path, strerror(errno));
-#endif
         free(new_log->name);
         free(new_log);
         *log = NULL;

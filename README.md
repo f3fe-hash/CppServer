@@ -24,8 +24,6 @@ To setup CppServer, There are a couple things to do:
 2. Compile the test with 'g++ test.cpp -o test'
 3. Run the test './test'
 
-*Sidenote: The test might say it took 3 seconds to send 30,000 requests, when it felt like 5. It probably did. There are just a ton of timers, so it is slower, but the results are still somewhat accurate.
-
 ```bash
 make     # Compile the code
 make run # Run CppServer

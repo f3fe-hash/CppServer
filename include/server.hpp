@@ -17,6 +17,7 @@
 
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 #include <cmath>
 
@@ -26,6 +27,7 @@
 #include "http.hpp"
 #include "memory.hpp"
 #include "threads.hpp"
+#include "jsonAPI.hpp"
 
 #define ALLOC_SIZE 128 * MiB
 
@@ -50,7 +52,7 @@ typedef struct
 class Client
 {
 public:
-    Client(int connfd, int clinum, sockaddr_in* addr, HTTP* httphandler);
+    Client(int connfd, int clinum, sockaddr_in* addr, HTTP* httphandler, API* api);
     ~Client();
 
     static void handle(ClientArgs* args);
@@ -60,6 +62,7 @@ public:
     struct sockaddr_in* addr;
 
     static HTTP* httphandler;
+    static API*  api;
 };
 
 extern Log_t* _info_log;
@@ -83,13 +86,13 @@ class Server
     std::queue<Client *> clients; // Client queue
     std::queue<std::thread *> threads; // Queue of threads. Checked by deallocator to remove done threads
 
-    // Mutexes
     std::mutex clients_mutex;
-    std::mutex threads_mutex;
+    std::mutex thread_mutex;
 
     ThreadPool* tpool;
 
     static HTTP* httphandler;
+    static API* api;
 
     // Multi-threading functions
     static void handle_client(void* args);

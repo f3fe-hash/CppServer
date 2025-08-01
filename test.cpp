@@ -12,7 +12,7 @@
 #define LOG_LENGTH  16384
 
 std::string SERVER_IP      = "192.168.1.30";    // Server IP to test
-std::string SERVER_PAGE    = "/index.html";     // Server page to test
+std::string SERVER_PAGE    = "/api";            // Server page to test
 constexpr int SERVER_PORT  =  8080;             // Server port to test
 constexpr int NUM_REQUESTS = 30000;             // Number of requests to test the server with
 
